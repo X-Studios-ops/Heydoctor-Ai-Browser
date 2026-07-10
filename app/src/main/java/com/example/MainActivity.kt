@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -209,6 +210,10 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
     // Laptop target optimization metric states (Simulated live performance stats for 4GB system)
     var simulatedRamUsed by remember { mutableStateOf(1.2f) }
     var isSystemOptimal by remember { mutableStateOf(true) }
+    
+    // Ad Blocker State
+    var isAdBlockerEnabled by remember { mutableStateOf(true) }
+    var adsBlockedCount by remember { mutableStateOf(0) }
     
     // Read the actual Android process JVM RAM usage to feed into the simulation
     LaunchedEffect(isPageLoading) {
@@ -801,6 +806,110 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
                             }
                         }
 
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // AD BLOCKER CARD
+                        Card(
+                            modifier = Modifier.fillMaxWidth().testTag("ad_blocker_card"),
+                            colors = CardDefaults.cardColors(containerColor = SophisticatedDarkSurface),
+                            border = BorderStroke(1.dp, SophisticatedDarkBorder)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Security,
+                                            contentDescription = "Ad Blocker",
+                                            tint = if (isAdBlockerEnabled) Color(0xFF00E5FF) else SophisticatedDarkTextSecondary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = "AD BLOCKER",
+                                            style = TextStyle(
+                                                color = SophisticatedDarkText,
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
+                                    }
+                                    
+                                    // Minimalist Switch
+                                    Switch(
+                                        checked = isAdBlockerEnabled,
+                                        onCheckedChange = { 
+                                            isAdBlockerEnabled = it 
+                                            webViewInstance?.reload()
+                                        },
+                                        modifier = Modifier
+                                            .scale(0.6f)
+                                            .height(16.dp)
+                                            .testTag("ad_block_toggle"),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color(0xFF00E5FF),
+                                            checkedTrackColor = Color(0xFF00E5FF).copy(alpha = 0.3f),
+                                            uncheckedThumbColor = SophisticatedDarkTextSecondary,
+                                            uncheckedTrackColor = SophisticatedDarkBorder
+                                        )
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.height(4.dp))
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Blocked Ads:",
+                                        style = TextStyle(
+                                            color = SophisticatedDarkTextSecondary,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    )
+                                    
+                                    Text(
+                                        text = "$adsBlockedCount",
+                                        style = TextStyle(
+                                            color = if (isAdBlockerEnabled) Color(0xFF00E5FF) else SophisticatedDarkTextSecondary,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    )
+                                }
+                                
+                                if (isAdBlockerEnabled && adsBlockedCount > 0) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Button(
+                                        onClick = { adsBlockedCount = 0 },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(18.dp)
+                                            .testTag("reset_blocked_count"),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = SophisticatedDarkBorder.copy(alpha = 0.3f),
+                                            contentColor = SophisticatedDarkText
+                                        ),
+                                        shape = RoundedCornerShape(4.dp),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Text(text = "Reset Counter", fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // QUICK SEARCH PORTAL
@@ -1345,6 +1454,26 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
                                             }
                                         }
 
+                                        override fun shouldInterceptRequest(
+                                            view: WebView?,
+                                            request: android.webkit.WebResourceRequest?
+                                        ): android.webkit.WebResourceResponse? {
+                                            if (isAdBlockerEnabled && request != null) {
+                                                val url = request.url?.toString() ?: ""
+                                                if (isAdUrl(url)) {
+                                                    view?.post {
+                                                        adsBlockedCount++
+                                                    }
+                                                    return android.webkit.WebResourceResponse(
+                                                        "text/plain",
+                                                        "UTF-8",
+                                                        java.io.ByteArrayInputStream("".toByteArray())
+                                                     )
+                                                }
+                                            }
+                                            return super.shouldInterceptRequest(view, request)
+                                        }
+
                                         override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
                                             return false // Load inside this WebView itself
                                         }
@@ -1493,5 +1622,43 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+fun isAdUrl(url: String): Boolean {
+    val lowerUrl = url.lowercase()
+    val adKeywords = listOf(
+        "doubleclick.net",
+        "googleads",
+        "googlesyndication.com",
+        "adservice.google",
+        "adsystem",
+        "adserver",
+        "adservice",
+        "adnxs.com",
+        "pubmatic.com",
+        "adcolony.com",
+        "mopub.com",
+        "amazon-adsystem.com",
+        "rubiconproject.com",
+        "taboola.com",
+        "outbrain.com",
+        "scorecardresearch.com",
+        "quantserve.com",
+        "/ads/",
+        "ads.js",
+        "analytics.js",
+        "ad_status",
+        "adsbygoogle",
+        "popads",
+        "popunder",
+        "exoclick",
+        "ad-delivery"
+    )
+    for (keyword in adKeywords) {
+        if (lowerUrl.contains(keyword)) {
+            return true
+        }
+    }
+    return false
 }
 

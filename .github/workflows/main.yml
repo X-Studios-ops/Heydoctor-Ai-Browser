@@ -53,7 +53,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build Debug APK
-        run: ./gradlew :app:assembleDebug
+        run: ./gradlew :app:assembleDebug -x validateSigningDebug
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4

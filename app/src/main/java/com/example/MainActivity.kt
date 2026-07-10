@@ -747,6 +747,45 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
                             }
                         }
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Button(
+                            onClick = {
+                                currentUrl = "https://www.google.com"
+                                inputUrlByHand = "https://www.google.com"
+                                webViewInstance?.loadUrl("https://www.google.com")
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .testTag("shortcut_google_search"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4285F4),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Google Search",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // OPEN TABS OVERVIEW

@@ -51,6 +51,8 @@ import com.example.ui.theme.SophisticatedDarkSurface
 import com.example.ui.theme.SophisticatedDarkText
 import com.example.ui.theme.SophisticatedDarkTextSecondary
 import kotlinx.coroutines.delay
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,9 +82,20 @@ data class BrowserTab(
     val isIncognito: Boolean = false
 )
 
+enum class SidebarTab {
+    WORKSPACE,
+    HISTORY
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
+    // History State
+    val historyViewModel: HistoryViewModel = viewModel()
+    val historyItems by historyViewModel.historyItems.collectAsStateWithLifecycle()
+    var activeSidebarTab by remember { mutableStateOf(SidebarTab.WORKSPACE) }
+    var historySearchQuery by remember { mutableStateOf("") }
+
     // Tab Management State
     var tabs by remember {
         mutableStateOf(
@@ -462,6 +475,22 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
                                 modifier = Modifier.size(24.dp)
                             )
                         }
+
+                        // HISTORY Button
+                        IconButton(
+                            onClick = {
+                                activeSidebarTab = SidebarTab.HISTORY
+                                isSidebarExpanded = true
+                            },
+                            modifier = Modifier.testTag("history_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "Open History",
+                                tint = if (activeSidebarTab == SidebarTab.HISTORY && isSidebarExpanded) SophisticatedDarkPrimary else SophisticatedDarkText,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
 
                     // Collapsible Sidebar Drawer Toggle Indicator
@@ -521,8 +550,86 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
                             .padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Sidebar Custom Logo / Banner Header
-                        Box(
+                        // Sidebar Tab Selector Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Workspace Tab Button
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(28.dp)
+                                    .clickable { activeSidebarTab = SidebarTab.WORKSPACE }
+                                    .testTag("tab_workspace_btn"),
+                                shape = RoundedCornerShape(6.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (activeSidebarTab == SidebarTab.WORKSPACE) SophisticatedDarkContainer else Color.Transparent
+                                ),
+                                border = if (activeSidebarTab == SidebarTab.WORKSPACE) BorderStroke(1.dp, SophisticatedDarkBorder) else null
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Dashboard,
+                                        contentDescription = "Workspace",
+                                        tint = if (activeSidebarTab == SidebarTab.WORKSPACE) SophisticatedDarkPrimary else SophisticatedDarkTextSecondary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = "Portal",
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (activeSidebarTab == SidebarTab.WORKSPACE) SophisticatedDarkText else SophisticatedDarkTextSecondary
+                                    )
+                                }
+                            }
+
+                            // History Tab Button
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(28.dp)
+                                    .clickable { activeSidebarTab = SidebarTab.HISTORY }
+                                    .testTag("tab_history_btn"),
+                                shape = RoundedCornerShape(6.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (activeSidebarTab == SidebarTab.HISTORY) SophisticatedDarkContainer else Color.Transparent
+                                ),
+                                border = if (activeSidebarTab == SidebarTab.HISTORY) BorderStroke(1.dp, SophisticatedDarkBorder) else null
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.History,
+                                        contentDescription = "History",
+                                        tint = if (activeSidebarTab == SidebarTab.HISTORY) SophisticatedDarkPrimary else SophisticatedDarkTextSecondary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = "History",
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (activeSidebarTab == SidebarTab.HISTORY) SophisticatedDarkText else SophisticatedDarkTextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        if (activeSidebarTab == SidebarTab.WORKSPACE) {
+                            // Sidebar Custom Logo / Banner Header
+                            Box(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
@@ -870,6 +977,163 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
                                 }
                             }
                         }
+                        } else {
+                            // History Panel UI
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Search & Clear Header Row
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // History Search field
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(28.dp)
+                                            .border(1.dp, SophisticatedDarkBorder, RoundedCornerShape(6.dp))
+                                            .background(SophisticatedDarkSurface)
+                                            .padding(horizontal = 4.dp),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Search,
+                                                contentDescription = "Search",
+                                                tint = SophisticatedDarkTextSecondary,
+                                                modifier = Modifier.size(10.dp)
+                                            )
+                                            BasicTextField(
+                                                value = historySearchQuery,
+                                                onValueChange = { historySearchQuery = it },
+                                                textStyle = TextStyle(
+                                                    color = SophisticatedDarkText,
+                                                    fontSize = 8.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                ),
+                                                singleLine = true,
+                                                modifier = Modifier.fillMaxWidth().testTag("history_search_input")
+                                            )
+                                        }
+                                    }
+
+                                    // Clear All button
+                                    IconButton(
+                                        onClick = { historyViewModel.clearHistory() },
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .border(1.dp, Color.Red.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                            .background(SophisticatedDarkSurface)
+                                            .testTag("clear_history_btn")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteForever,
+                                            contentDescription = "Clear History",
+                                            tint = Color.Red,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+
+                                // Chronological History List
+                                val filteredItems = historyItems.filter {
+                                    it.title.contains(historySearchQuery, ignoreCase = true) ||
+                                    it.url.contains(historySearchQuery, ignoreCase = true)
+                                }
+
+                                if (filteredItems.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = if (historySearchQuery.isEmpty()) "No history logged yet." else "No matches found.",
+                                            color = SophisticatedDarkTextSecondary,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        filteredItems.forEach { item ->
+                                            Card(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(44.dp)
+                                                    .clickable {
+                                                        currentUrl = item.url
+                                                        inputUrlByHand = item.url
+                                                        webViewInstance?.loadUrl(item.url)
+                                                    }
+                                                    .testTag("history_item_${item.id}"),
+                                                shape = RoundedCornerShape(8.dp),
+                                                colors = CardDefaults.cardColors(containerColor = SophisticatedDarkSurface),
+                                                border = BorderStroke(1.dp, SophisticatedDarkBorder.copy(alpha = 0.5f))
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Language,
+                                                        contentDescription = "Visited Page",
+                                                        tint = SophisticatedDarkPrimary,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                    Column(
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Text(
+                                                            text = item.title,
+                                                            fontSize = 9.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = SophisticatedDarkText,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        Text(
+                                                            text = item.url.removePrefix("https://").removePrefix("www."),
+                                                            fontSize = 7.sp,
+                                                            fontWeight = FontWeight.Normal,
+                                                            color = SophisticatedDarkTextSecondary,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                    }
+                                                    IconButton(
+                                                        onClick = { historyViewModel.deleteHistoryEntry(item.id) },
+                                                        modifier = Modifier.size(16.dp).testTag("delete_history_${item.id}")
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Close,
+                                                            contentDescription = "Delete entry",
+                                                            tint = SophisticatedDarkTextSecondary.copy(alpha = 0.6f),
+                                                            modifier = Modifier.size(10.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1075,6 +1339,9 @@ fun HeydoctorBrowserApp(modifier: Modifier = Modifier) {
                                                 tabs = tabs.map { tab ->
                                                     if (tab.id == activeTabId) tab.copy(title = title) else tab
                                                 }
+                                            }
+                                            if (!isActiveTabIncognito) {
+                                                historyViewModel.addHistoryEntry(url ?: "", view?.title ?: "")
                                             }
                                         }
 

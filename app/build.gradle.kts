@@ -51,7 +51,7 @@ android {
       if (customKeystore.exists()) {
         signingConfig = signingConfigs.getByName("debugConfig")
       } else {
-        signingConfig = signingConfigs.getByName("debug")
+        signingConfig = null
       }
     }
   }

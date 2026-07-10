@@ -3,9 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch: # Allows manual triggers from the GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,43 +20,36 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Decode Debug Keystore
-        run: |
-          if [ -f "debug.keystore.base64" ]; then
-            echo "Decoding debug.keystore from base64..."
-            base64 -d debug.keystore.base64 > debug.keystore
-          else
-            echo "No debug.keystore.base64 found. Gradle will generate a default one."
-          fi
-
-      - name: Create local.properties & Environment files
-        run: |
-          # Create a mock/empty .env file if secrets plugin depends on it
-          if [ ! -f ".env" ]; then
-            if [ -f ".env.example" ]; then
-              cp .env.example .env
-            else
-              touch .env
-            fi
-          fi
-
       - name: Force Regenerate Gradle Wrapper
         run: |
-          echo "Force-regenerating Gradle Wrapper to resolve corruption or checksum mismatch..."
-          # Overwrite any corrupt or custom wrapper jar with a clean official one
           gradle wrapper --gradle-version 9.3.1
           chmod +x gradlew
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build Debug APK
+      - name: Build Debug APK (Unsigned)
         run: ./gradlew :app:assembleDebug
 
-      - name: Upload Debug APK Artifact
+      - name: Sign APK (Zipalign & Apksigner)
+        run: |
+          # Find the compiled unsigned APK
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          echo "Found APK: $APK_PATH"
+          
+          # Generate a temporary digital signature (Keystore)
+          keytool -genkey -v -keystore temp.keystore -alias mykey -keyalg RSA -keysize 2048 -validity 10000 -storepass "password123" -keypass "password123" -dname "CN=Heydoctor, OU=App, O=Studio, L=Ranchi, ST=Jharkhand, C=IN"
+          
+          # Get Android SDK Build Tools directory
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          
+          # Zipalign the APK (Crucial for modern Android installation)
+          $BUILD_TOOLS_DIR/zipalign -v -p 4 $APK_PATH aligned.apk
+          
+          # Sign the APK with the generated signature
+          $BUILD_TOOLS_DIR/apksigner sign --ks temp.keystore --ks-pass pass:password123 --key-pass pass:password123 --in aligned.apk --out Heydoctor-Ready-To-Install.apk
+
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: browser-app-debug-apk
-          path: app/build/outputs/apk/**/*.apk
+          name: Heydoctor-Signed-APK
+          path: Heydoctor-Ready-To-Install.apk
           if-no-files-found: error
           retention-days: 7

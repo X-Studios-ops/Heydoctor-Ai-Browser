@@ -42,12 +42,11 @@ jobs:
             fi
           fi
 
-      - name: Ensure Gradle Wrapper is Present
+      - name: Force Regenerate Gradle Wrapper
         run: |
-          if [ ! -f "gradlew" ]; then
-            echo "gradlew wrapper script not found. Generating wrapper..."
-            gradle wrapper
-          fi
+          echo "Force-regenerating Gradle Wrapper to resolve corruption or checksum mismatch..."
+          # Overwrite any corrupt or custom wrapper jar with a clean official one
+          gradle wrapper --gradle-version 9.3.1
           chmod +x gradlew
 
       - name: Setup Gradle

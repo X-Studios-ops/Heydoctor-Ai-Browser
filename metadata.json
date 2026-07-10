@@ -1,0 +1,6 @@
+{
+  "name": "Heydoctor Browser",
+  "description": "A high-performance, sleek web browser application tailored for secure medical nodes and AI web apps with premium dark aesthetics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
